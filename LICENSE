@@ -1,0 +1,47 @@
+Licença de Uso e Contribuição do NexoGraph
+
+Copyright (©) 2026 André Felipe de Barros. Todos os direitos reservados.
+
+1. O que você pode fazer
+
+   a) Usar o NexoGraph de graça, para qualquer fim, inclusive criar diagramas,
+      aulas e materiais comerciais. Tudo o que você cria ou exporta com ele é seu.
+   b) Ler o código-fonte, estudá-lo e aprender com ele.
+   c) Fazer um fork do repositório oficial no GitHub apenas para propor
+      mudanças ao projeto por meio de pull requests.
+   d) Executar uma cópia do projeto no seu próprio computador para desenvolver
+      e testar essas contribuições.
+
+2. O que você não pode fazer
+
+   a) Publicar, hospedar, distribuir ou oferecer o NexoGraph, alterado ou não,
+      como um projeto, serviço ou produto separado do repositório oficial.
+   b) Criar e distribuir versões derivadas, ou apresentar o NexoGraph ou partes
+      dele como obra sua.
+   c) Copiar o código, no todo ou em parte, para outros projetos.
+   d) Vender o NexoGraph ou cobrar por ele.
+   e) Remover ou alterar o nome do autor, os avisos de copyright e este texto.
+
+3. Contribuições
+
+   Ao enviar uma contribuição (pull request, patch, issue com código ou
+   qualquer material), você declara que é autor dela ou tem o direito de
+   enviá-la e concede ao autor do NexoGraph uma licença perpétua, mundial,
+   gratuita e irrevogável para usar, modificar e distribuir a contribuição como
+   parte do projeto. O seu nome continua registrado no histórico do repositório.
+
+4. Componentes de terceiros
+
+   As bibliotecas e fontes usadas pelo projeto (Next.js, React, Mermaid,
+   lucide-react e Fontsource, entre outras) mantêm as suas próprias licenças.
+   Esta licença vale apenas para o código e o conteúdo do NexoGraph.
+
+5. Sem garantia
+
+   O software é fornecido "como está", sem garantia de qualquer tipo. O autor
+   não se responsabiliza por danos decorrentes do uso do NexoGraph.
+
+6. Autorizações
+
+   Para pedir uma autorização que esta licença não dá, fale com o autor pelo
+   GitHub: https://github.com/andrefelipebarros
