@@ -5,10 +5,6 @@
 <h1 align="center">NexoGraph<br><sub><sup><sup><sub>Copyright (©) 2026 André Felipe de Barros</sub></sup></sup></sub></h1>
 
 <p align="center">
-  Feito em parceria com <a href="https://github.com/ravelroot">Erik Pimenta (ravelroot)</a>
-</p>
-
-<p align="center">
   Editor de diagramas que roda no navegador e junta três jeitos de criar no mesmo estúdio: desenhe no quadro arrastando caixas e ligando setas, escreva em Mermaid num editor com colchetes e setas coloridos, ou monte uma aula que revela o diagrama bloco a bloco, como um rascunho feito à mão em papel. Exporte SVG, PNG ou Markdown (<code>.md</code>) com o diagrama pronto para o GitHub.<br>
   Sem conta, sem servidor e sem instalar nada além do Node.js: tudo fica salvo no seu navegador.<br>
   Comece de um dos 63 modelos prontos (UML, BPMN, C4, ER, SysML e outros) ou de um dos 46 Design Patterns.
