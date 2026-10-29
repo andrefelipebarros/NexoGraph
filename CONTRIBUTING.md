@@ -19,7 +19,7 @@ Obrigado por querer ajudar! Qualquer contribuição é bem-vinda: correção de 
    ```
 
 4. Faça a mudança, com commits pequenos e mensagens claras em português.
-5. Confira se tudo passa:
+5. Confira se tudo passa (ou rode tudo de uma vez com `npm run check`):
 
    ```bash
    npm run lint
@@ -34,13 +34,15 @@ Obrigado por querer ajudar! Qualquer contribuição é bem-vinda: correção de 
 - **Sem gradientes.** Use cores chapadas, em qualquer parte do site.
 - **Cores dos temas em hexadecimal**, pelas variáveis CSS de `app/globals.css`. Nada de cor fixa nos componentes.
 - **Textos em português do Brasil**, sem travessão longo, e com linguagem simples: o NexoGraph precisa ser fácil para quem nunca usou.
-- **Acessibilidade:** botões com nome, foco visível e uso por teclado.
+- **Acessibilidade:** botões com nome, foco visível e uso por teclado. Janelas novas usam o componente `components/Modal.tsx`.
+- **Movimento:** use os tokens `--dur`, `--ease` e `--shadow-*` de `app/globals.css` para transições e sombras, e confira que tudo continua bem com a opção de reduzir movimento.
+- **Sem comentários no código:** nomes claros no lugar de comentários.
 - **Sem backend e sem conta:** os dados continuam no navegador.
 - Antes de usar uma API do Next.js, confira a documentação em `node_modules/next/dist/docs/`, porque esta versão tem mudanças em relação às anteriores.
 
 ## Ideias que ajudariam
 
-- Reordenar blocos da aula e editar rótulos de setas com mais liberdade.
+- Editar rótulos de setas com mais liberdade e selecionar elementos por área no quadro.
 - Notas do professor na apresentação.
 - Importar um arquivo `.mmd` para o quadro.
 - Novos temas e novos modelos de diagrama.

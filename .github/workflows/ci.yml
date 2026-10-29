@@ -1,27 +1,36 @@
-name: CI - Nexo Graph Frontend
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  check:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Faz o checkout do código
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Configura o Node.js
+      - name: Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' 
-          cache: 'npm'
+          node-version: 22
+          cache: npm
 
-      - name: 🧩 Instala as dependências
+      - name: Dependências
         run: npm ci
 
-      - name: 🏗️ Faz o Build do Next.js
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Build
         run: npm run build

@@ -14,7 +14,6 @@ const SOURCE = `flowchart LR
 const highlighted = highlightMermaid(SOURCE);
 const NO_MATCH = new Set<number>();
 
-/** Linhas do código que cada peça do desenho representa. */
 const NODE_LINES: Record<string, number[]> = { U: [2], G: [2, 3], S: [3, 4, 5], C: [4], D: [5] };
 const EDGE_LINES: Record<string, number[]> = { e1: [2], e2: [3], e3: [4], e4: [5] };
 

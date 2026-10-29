@@ -1,7 +1,3 @@
-/**
- * Traços "feitos à mão" para a aula. Tudo é calculado a partir de uma semente (o id do bloco),
- * então o desenho é sempre o mesmo para o mesmo bloco, sem tremer a cada atualização.
- */
 
 export function seedFrom(text: string) {
   let hash = 2166136261;
@@ -21,7 +17,6 @@ export function random(seed: number) {
 
 const f = (value: number) => value.toFixed(1);
 
-/** Um contorno de retângulo desenhado em um traço, com cantos que não fecham direito, como no papel. */
 function roughOutline(w: number, h: number, rand: () => number, wobble: number) {
   const j = () => (rand() - 0.5) * wobble * 2;
   const corners: [number, number][] = [[0, 0], [w, 0], [w, h], [0, h]];
@@ -35,7 +30,6 @@ function roughOutline(w: number, h: number, rand: () => number, wobble: number) 
     const sag = (rand() - 0.5) * wobble * 1.6;
     const mx = (ax + bx) / 2 + (by - ay === 0 ? 0 : sag) + j() * 0.3;
     const my = (ay + by) / 2 + (bx - ax === 0 ? 0 : sag) + j() * 0.3;
-    // o último lado passa um pouco do ponto inicial, o que dá o ar de "fechado sem pensar"
     const overshoot = side === 3 ? 1.04 : 1;
     const ex = side === 3 ? ax + (bx - ax) * overshoot + j() : bx + j();
     const ey = side === 3 ? ay + (by - ay) * overshoot + j() : by + j();
@@ -44,13 +38,11 @@ function roughOutline(w: number, h: number, rand: () => number, wobble: number) 
   return points.join(' ');
 }
 
-/** Retângulo com dois contornos sobrepostos (como quem passa a caneta duas vezes). */
 export function roughRect(w: number, h: number, seed: number) {
   const rand = random(seed);
   return [roughOutline(w, h, rand, 2.2), roughOutline(w, h, rand, 2.2)];
 }
 
-/** Hachura diagonal dentro de um retângulo, em linhas levemente tortas. */
 export function hatch(w: number, h: number, seed: number, gap = 9) {
   const rand = random(seed ^ 0x9e3779b1);
   const parts: string[] = [];
@@ -63,7 +55,6 @@ export function hatch(w: number, h: number, seed: number, gap = 9) {
 
 export type Point = { x: number; y: number };
 
-/** Seta curva de a até b e a ponta dela, tudo à mão levantada. */
 export function curvedArrow(a: Point, b: Point, seed: number) {
   const rand = random(seed);
   const dx = b.x - a.x;

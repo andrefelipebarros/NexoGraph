@@ -5,13 +5,17 @@
 <h1 align="center">NexoGraph<br><sub><sup><sup><sub>Copyright (©) 2026 André Felipe de Barros</sub></sup></sup></sub></h1>
 
 <p align="center">
+  Feito em parceria com <a href="https://github.com/ravelroot">Erik Pimenta (ravelroot)</a>
+</p>
+
+<p align="center">
   Editor de diagramas que roda no navegador e junta três jeitos de criar no mesmo estúdio: desenhe no quadro arrastando caixas e ligando setas, escreva em Mermaid num editor com colchetes e setas coloridos, ou monte uma aula que revela o diagrama bloco a bloco, como um rascunho feito à mão em papel. Exporte SVG, PNG ou Markdown (<code>.md</code>) com o diagrama pronto para o GitHub.<br>
   Sem conta, sem servidor e sem instalar nada além do Node.js: tudo fica salvo no seu navegador.<br>
   Comece de um dos 63 modelos prontos (UML, BPMN, C4, ER, SysML e outros) ou de um dos 46 Design Patterns.
 </p>
 
 <p align="center">
-  Next.js 16 (App Router) · React 19 · TypeScript · Mermaid 11 · CSS puro com variáveis · lucide-react · ESLint
+  <strong>Versão 0.6.0</strong> · Next.js 16 (App Router) · React 19.2 · TypeScript · Mermaid 11 · CSS puro com variáveis · lucide-react · ESLint
 </p>
 
 ---
@@ -24,19 +28,33 @@
   <img src="docs/images/tela-home.png" alt="Página inicial do NexoGraph com o editor de código Mermaid e o diagrama lado a lado">
 </p>
 
+## Novidades da versão 0.6.0
+
+- **Quadro com zoom e navegação:** zoom de 40% a 200% pelos botões no canto da folha, por `Ctrl` + roda do mouse ou por `Ctrl` + `+` / `-` / `0`, botão **Ajustar à tela**, arraste o fundo para navegar e dê dois cliques em qualquer ponto vazio para criar uma caixa ali.
+- **Refazer e selecionar tudo:** o histórico agora vai e volta (`Ctrl` + `Shift` + `Z` ou `Ctrl` + `Y`), `Ctrl` + `A` seleciona todos os elementos e mover com as setas do teclado também entra no histórico.
+- **Setas mais legíveis:** o texto de cada seta ganhou uma etiqueta com fundo própria, que sobe quando o espaço entre as formas é curto, e a seta destaca ao passar o mouse.
+- **Aula:** blocos podem ser movidos para cima e para baixo, a apresentação abre em tela cheia de verdade e aceita `Enter`, `Home` e `End`.
+- **Salvamento mais leve:** o estado é gravado depois de uma pequena pausa, e não a cada movimento do mouse, com indicador **Salvando…** / **Salvo neste navegador** e aviso quando o navegador não deixa salvar.
+- **Diálogos acessíveis:** ajuda, biblioteca de Design Patterns e a confirmação de troca de exemplo usam o mesmo componente, com foco preso dentro da janela, retorno do foco ao fechar, `Esc` e animação de entrada. A confirmação nativa do navegador deu lugar a uma janela com a opção **Copiar e trocar**.
+- **Interface mais fluida:** transições suaves em botões, abas, campos e cartões, notificações animadas com ícone, menu de temas animado, cabeçalho translúcido na página inicial, estado vazio centralizado e carregamento do estúdio com indicador.
+- **Correções:** o estúdio não estoura mais a largura em telas de celular, os links de seção da página inicial não ficam escondidos atrás do cabeçalho, o aviso de carregamento usa a cor certa do tema e o rodapé mostra a versão real do `package.json`.
+- **Projeto:** favicon, metadados de página, `.gitignore`, `npm run check`, CI com lint, tipos e build e código sem comentários soltos.
+
+O histórico completo está no [`CHANGELOG.md`](CHANGELOG.md).
+
 ## O que o NexoGraph faz
 
-- **Quadro:** seis formas (caixa, decisão, banco de dados, nota, início ou fim e pessoa) em sete cores. Arraste para mover, dê dois cliques para editar o texto e use **Conectar** para ligar duas formas com uma seta, que aceita texto e pode ter o sentido invertido. Seleção múltipla com Shift, duplicar, desfazer, setas do teclado para ajustar a posição e um botão **Centralizar** que coloca o diagrama no meio da tela.
+- **Quadro:** seis formas (caixa, decisão, banco de dados, nota, início ou fim e pessoa) em sete cores. Arraste para mover, dê dois cliques para editar o texto e use **Conectar** para ligar duas formas com uma seta, que aceita texto e pode ter o sentido invertido. Seleção múltipla com Shift ou `Ctrl` + `A`, duplicar, desfazer e refazer, setas do teclado para ajustar a posição, zoom com ajuste à tela, navegação arrastando o fundo, criação de caixa com dois cliques na folha e um botão **Centralizar** que coloca o diagrama no meio da tela.
 - **Código Mermaid:** editor com cara de VS Code, escrito do zero. Cada nível de colchetes ganha uma cor (dourado, lilás e azul, em ciclo), o par do colchete sob o cursor fica destacado e cada tipo de seta tem a sua cor (contínua, tracejada, grossa e simples). Fecha colchetes e aspas sozinho, comenta linhas com `Ctrl+/`, mostra guias de recuo, número de linha e posição do cursor. Colchete que não fecha deixa a linha vermelha e aparece no painel **Problemas**, com a linha onde está o erro.
 - **Do quadro para o código, só se você quiser:** o quadro funciona sozinho. Quando terminar o desenho, **Gerar código Mermaid** transforma o que está na tela em um `flowchart` escrito. O inverso também vale: dá para ignorar o quadro e escrever direto na aba de código, com seis exemplos e botões para inserir caixa, decisão, banco de dados e cada tipo de seta no cursor. A visualização ao lado atualiza enquanto você digita e tem zoom e ajuste à tela.
-- **Aula:** cada bloco vira uma caixa desenhada à mão, com contorno torto, hachura, um post-it com a explicação e uma seta curva que se desenha sozinha a partir do bloco anterior. Há três organizações: **Sequência** (da esquerda para a direita), **Raiz** (a ideia principal no topo e os ramos para baixo, com a escolha de qual bloco gera cada ideia) e **Invertida** (da direita para a esquerda). A folha acompanha o bloco atual e pode ser arrastada e ampliada.
-- **Apresentação em tela cheia:** navegação por setas do teclado, espaço e `PageUp` / `PageDown`, barra de progresso e saída com `Esc`.
+- **Aula:** cada bloco vira uma caixa desenhada à mão, com contorno torto, hachura, um post-it com a explicação e uma seta curva que se desenha sozinha a partir do bloco anterior. Há três organizações: **Sequência** (da esquerda para a direita), **Raiz** (a ideia principal no topo e os ramos para baixo, com a escolha de qual bloco gera cada ideia) e **Invertida** (da direita para a esquerda). Os blocos podem ser reordenados, e a folha acompanha o bloco atual e pode ser arrastada e ampliada.
+- **Apresentação em tela cheia:** usa a tela cheia do navegador, navega por setas do teclado, espaço, `Enter`, `PageUp` / `PageDown`, `Home` e `End`, mostra a barra de progresso e sai com `Esc`.
 - **Modelos e Design Patterns:** 63 modelos de diagrama em 11 famílias (UML, Arquitetura, Processos, Infraestrutura, Dados, Análise, UX e produto, SysML, Gestão, Testes e Segurança), com busca e filtro. A biblioteca de **Design Patterns** traz os 23 padrões GoF e padrões de arquitetura, persistência e sistemas distribuídos (46 ao todo), que abrem como diagrama editável ou como uma aula pronta.
 - **Exportação:** SVG e PNG do quadro, SVG e PNG do diagrama Mermaid, copiar o código, arquivo `.md` com um bloco `mermaid` que o GitHub renderiza sozinho e roteiro da aula em Markdown, que preserva a organização escolhida.
 - **Cinco temas:** Grafite (padrão, escuro no estilo VS Code), Tokyo Night, Nord, Papel (claro) e Preto e branco (alto contraste, ótimo para imprimir). A escolha fica salva e vale também para o Mermaid e para as exportações.
 - **Sem gradientes:** o visual inteiro usa cores chapadas, seguindo a linha de editores de código.
-- **Salvo no navegador:** o quadro, o código, a aula, o título e a aba aberta ficam no `localStorage`. Nada sai do seu computador.
-- **Fácil de usar:** a primeira visita mostra três passos curtos, o botão `?` abre uma ajuda, todo botão importante tem um nome claro e dá para navegar pelo teclado.
+- **Salvo no navegador:** o quadro, o código, a aula, o título e a aba aberta ficam no `localStorage`, gravados logo depois de cada pausa na edição e também ao fechar a aba. O cabeçalho mostra quando está salvando. Nada sai do seu computador.
+- **Fácil de usar:** a primeira visita mostra três passos curtos, o botão `?` (ou a tecla `?`) abre uma ajuda, todo botão importante tem um nome claro, as janelas prendem o foco do teclado e as animações respeitam a opção de reduzir movimento do sistema.
 
 <p align="center">
   <img src="docs/images/tela-quadro.png" alt="Quadro com o exemplo de arquitetura: usuário, API Gateway, serviço, banco de dados e uma nota, ligados por setas com texto">
@@ -87,20 +105,29 @@ npm start
 | `npm start` | Serve a versão de produção |
 | `npm run lint` | ESLint, com as regras do React Compiler |
 | `npm run typecheck` | Confere os tipos com o TypeScript |
+| `npm run check` | Roda lint, tipos e build em sequência, como o CI |
 
 ## Atalhos
 
 | Atalho | Onde | Ação |
 |---|---|---|
 | `Ctrl` + `Z` | Quadro e código | Desfazer |
+| `Ctrl` + `Shift` + `Z` ou `Ctrl` + `Y` | Quadro | Refazer |
 | `Delete` | Quadro | Remove o que está selecionado |
 | `Ctrl` + `D` | Quadro | Duplica o elemento |
+| `Ctrl` + `A` | Quadro | Seleciona todos os elementos |
 | Setas (e `Shift` + setas) | Quadro | Move o elemento selecionado, de 8 em 8 px (ou de 1 em 1) |
 | `Shift` + clique | Quadro | Soma elementos à seleção |
 | `Enter` ou dois cliques | Quadro | Edita o texto do elemento |
+| Dois cliques na folha | Quadro | Cria uma caixa naquele ponto |
+| Arrastar o fundo | Quadro | Navega pela folha |
+| `Ctrl` + roda do mouse | Quadro e visualização Mermaid | Zoom |
+| `Ctrl` + `+` / `-` / `0` | Quadro | Aumenta, diminui ou volta o zoom para 100% |
 | `Ctrl` + `/` | Código | Comenta ou descomenta as linhas |
-| `Esc` | Quadro e ajuda | Cancela uma ligação, limpa a seleção ou fecha a janela |
-| `←` `→` e espaço | Apresentação | Bloco anterior e próximo |
+| `?` | Estúdio | Abre a ajuda |
+| `Esc` | Quadro e janelas | Cancela uma ligação, limpa a seleção ou fecha a janela |
+| `←` `→`, espaço e `Enter` | Apresentação | Bloco anterior e próximo |
+| `Home` e `End` | Apresentação | Primeiro e último bloco |
 | `Esc` | Apresentação | Sai da tela cheia |
 
 ## Como ler as cores do código
@@ -135,12 +162,13 @@ flowchart LR
 ```text
 app/
   page.tsx                  página inicial (componente de servidor)
-  layout.tsx                fontes, tema inicial e metadados
-  globals.css               temas, componentes e responsividade, sem gradientes
+  layout.tsx                fontes, tema inicial, metadados e viewport
+  icon.svg                  ícone da aba do navegador
+  globals.css               temas, tokens de movimento e sombra, componentes e responsividade, sem gradientes
   studio/
     studio-client.tsx       o estúdio: abas, estado salvo, exportações e ajuda
-    manual-board.tsx        o quadro: arrastar, ligar, propriedades e centralizar
-    use-board.ts            estado do quadro, seleção, conexões e desfazer
+    manual-board.tsx        o quadro: arrastar, ligar, zoom, navegação, propriedades e centralizar
+    use-board.ts            estado do quadro, seleção, conexões, desfazer e refazer
     mermaid-studio.tsx      editor Mermaid, exemplos, visualização e exportação
     teaching-board.tsx      a aula: blocos, organização e apresentação
     pattern-library.tsx     biblioteca de Design Patterns
@@ -149,11 +177,13 @@ app/
     templates.ts            transforma modelos e padrões em quadros e aulas
     types.ts                formas, setas, blocos e a geração de código e SVG
 components/
+  Modal.tsx                 janela acessível usada pela ajuda, biblioteca e confirmações
   CodeEditor.tsx            editor de código com realce e colchetes coloridos
   SketchBoard.tsx           a folha desenhada à mão da aula
   ThemeSwitcher.tsx         troca de tema
   landing/                  seções da página inicial
 lib/
+  site.ts                   endereço do repositório e versão lida do package.json
   mermaid-highlight.ts      realce, níveis de colchetes, setas e lista de problemas
   sketch.ts                 traços à mão levantada (contornos, hachura e setas curvas)
   markdown.ts               exportação em Markdown para o GitHub
@@ -167,6 +197,10 @@ docs/images/                imagens deste README
 - **Editor de código próprio:** uma `textarea` transparente sobre uma camada realçada. O realce vem de `lib/mermaid-highlight.ts`, que também calcula os pares de colchetes e os problemas.
 - **Aula à mão levantada:** os traços saem de uma semente (o id do bloco), então o desenho de cada bloco é sempre o mesmo, sem tremer a cada atualização.
 - **Sem backend:** tudo roda no navegador e é guardado no `localStorage`, na chave `nexograph-studio-v2`.
+- **Leitura do salvo sem efeito colateral:** o estúdio só monta depois que o navegador está pronto, e o estado salvo entra direto nos valores iniciais. Assim o HTML do servidor e o do navegador não divergem e não há regras de lint desligadas.
+- **Gravação com pausa:** o estado é serializado a cada mudança, mas só vai para o `localStorage` depois de 450 ms sem edição, o que deixa o arraste fluido mesmo em quadros grandes.
+- **Eventos estáveis:** atalhos, roda do mouse e tela cheia usam `useEffectEvent` (React 19.2), então os ouvintes são registrados uma vez e sempre leem o estado atual.
+- **Zoom por escala:** a folha do quadro é escalada com `transform`, e as coordenadas do arraste e da criação de formas são divididas pelo zoom, então as posições salvas não mudam com o zoom.
 
 ## Limitações conhecidas
 
@@ -178,7 +212,12 @@ docs/images/                imagens deste README
 
 ## Contribuindo
 
-Veja o [`CONTRIBUTING.md`](CONTRIBUTING.md). Em resumo: abra uma *issue* para conversar, faça um *fork* para propor a mudança, rode `npm run lint`, `npm run typecheck` e `npm run build` e abra um *pull request*. Ideias não faltam: reordenar blocos da aula, editar rótulos de setas com mais liberdade, notas do professor, importar um `.mmd` para o quadro, novos temas e mais modelos.
+Veja o [`CONTRIBUTING.md`](CONTRIBUTING.md). Em resumo: abra uma *issue* para conversar, faça um *fork* para propor a mudança, rode `npm run lint`, `npm run typecheck` e `npm run build` e abra um *pull request*. Ideias não faltam: editar rótulos de setas com mais liberdade, notas do professor, importar um `.mmd` para o quadro, seleção por área no quadro, novos temas e mais modelos.
+
+## Autores
+
+- [André Felipe de Barros](https://github.com/andrefelipebarros), criador e mantenedor do NexoGraph.
+- [Erik Pimenta (ravelroot)](https://github.com/ravelroot), parceiro no desenvolvimento.
 
 ## Referências técnicas
 

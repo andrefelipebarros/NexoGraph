@@ -7,7 +7,7 @@ import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Logo } from '@/components/Logo';
 import { catalog } from '@/app/studio/catalog';
 import { designPatterns } from '@/app/studio/design-patterns';
-import { GITHUB_URL } from '@/lib/site';
+import { APP_VERSION, GITHUB_URL } from '@/lib/site';
 
 export default function Home() {
   return (
@@ -18,7 +18,7 @@ export default function Home() {
           <nav className="nav-links" aria-label="Seções da página">
             <a href="#como-funciona">Como funciona</a>
             <a href="#modelos">Modelos</a>
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer noopener">GitHub</a>
           </nav>
           <div className="nav-right">
             <ThemeSwitcher />
@@ -74,9 +74,9 @@ export default function Home() {
       </main>
 
       <footer className="statusbar footbar">
-        <span className="status-item">NexoGraph 0.5</span>
+        <span className="status-item">NexoGraph {APP_VERSION}</span>
         <span className="status-item">Protótipo local, sem conta</span>
-        <a className="status-item push" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
+        <a className="status-item push" href={GITHUB_URL} target="_blank" rel="noreferrer noopener">GitHub</a>
       </footer>
     </>
   );

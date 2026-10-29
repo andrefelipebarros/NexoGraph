@@ -18,10 +18,8 @@ type Props = {
   slides: Slide[];
   index: number;
   onIndex: (index: number) => void;
-  /** Modo apresentação: letras maiores e setas de navegação sobre a folha. */
   large?: boolean;
   layout?: LessonLayout;
-  /** Mostra o desenho inteiro, parado e sem controles. Usado na prévia da página inicial. */
   overview?: boolean;
 };
 type Pan = { index: number; x: number; y: number };
@@ -35,7 +33,6 @@ function parentOf(slides: Slide[], i: number): string | null {
   return i > 0 ? slides[i - 1].id : null;
 }
 
-/** Mantém a sequência original e posiciona a aula em níveis, com a raiz no topo. */
 function layoutSlides(slides: Slide[], layout: LessonLayout): Position[] {
   if (layout === 'linear') {
     return slides.map((slide, i) => ({ ...place(i), parentId: i > 0 ? slides[i - 1].id : null, depth: i }));
@@ -45,7 +42,6 @@ function layoutSlides(slides: Slide[], layout: LessonLayout): Position[] {
   const parents = slides.map((_, i) => {
     const parentId = parentOf(slides, i);
     const parentIndex = parentId ? byId.get(parentId) : undefined;
-    // Uma ligação para si próprio ou para um bloco posterior não entra na hierarquia.
     return parentIndex !== undefined && parentIndex < i ? parentId : null;
   });
   const children = new Map<string, string[]>();
@@ -61,7 +57,6 @@ function layoutSlides(slides: Slide[], layout: LessonLayout): Position[] {
   let leafCursor = 0;
   let maxDepth = 0;
 
-  // "Raiz": cada nível desce; subárvores ocupam colunas e o pai fica centrado sobre os filhos.
   if (layout === 'tree') {
     const placeDown = (id: string, depth: number): number => {
       maxDepth = Math.max(maxDepth, depth);
@@ -88,7 +83,6 @@ function layoutSlides(slides: Slide[], layout: LessonLayout): Position[] {
     return slides.map((slide) => positions.get(slide.id) ?? { x: 0, y: 0, parentId: null, depth: 0 });
   }
 
-  // "Invertida": preserva a organização lateral, mas faz a hierarquia caminhar da direita para a esquerda.
   let leafY = 0;
   const placeAcross = (id: string, depth: number): number => {
     maxDepth = Math.max(maxDepth, depth);
@@ -112,12 +106,10 @@ function layoutSlides(slides: Slide[], layout: LessonLayout): Position[] {
   });
 }
 
-/** Posição da trilha antiga: zigue-zague, como um rascunho feito na folha. */
 function place(i: number) {
   return { x: i * COLUMN, y: i % 2 === 0 ? 0 : ROW_SHIFT };
 }
 
-/** A aula desenhada à mão, em sequência ou como uma árvore de ideias com raízes e ramos. */
 export function SketchBoard({ slides, index, onIndex, large = false, layout = 'linear', overview = false }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);

@@ -14,7 +14,6 @@ function link(from: ShapeNode, to: ShapeNode, label = ''): Edge {
   return { id: createId('edge'), from: from.id, to: to.id, label };
 }
 
-/** Monta um quadro inicial a partir de um item da biblioteca de diagramas. */
 export function boardFromCatalog(item: CatalogItem): Board {
   const title = item.title.toLowerCase();
   if (title.includes('classe')) {
@@ -50,7 +49,6 @@ export function boardFromCatalog(item: CatalogItem): Board {
   return { nodes: [main, input, step, result], edges: [link(input, main), link(main, step), link(step, result)] };
 }
 
-/** Transforma um design pattern em diagrama editável. */
 export function boardFromPattern(pattern: DesignPattern): Board {
   const nodes: ShapeNode[] = pattern.nodes.map((spec, index) => ({
     id: createId('pattern-node'),
@@ -66,7 +64,6 @@ export function boardFromPattern(pattern: DesignPattern): Board {
   return { nodes, edges };
 }
 
-/** Transforma um design pattern em uma aula que se revela bloco a bloco. */
 export function lessonFromPattern(pattern: DesignPattern): Slide[] {
   return [
     { id: createId('lesson'), title: `Problema: ${pattern.name}`, subtitle: pattern.intent, bullets: [`Quando usar: ${pattern.useCase}`, `Família: ${pattern.family}, ${pattern.category}`, 'Avance para revelar cada participante e sua responsabilidade.'], accent: BLUE },

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AlignLeft, ArrowLeft, ArrowLeftRight, ArrowRight, Check, Download, GitBranch, Layers, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useEffectEvent, useState } from 'react';
+import { AlignLeft, ArrowDown, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, Check, Download, GitBranch, Layers, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
 import { SketchBoard } from '@/components/SketchBoard';
 import { colorPalette, createId } from './types';
 import type { LessonLayout, Slide } from './types';
@@ -32,16 +32,57 @@ export function TeachingBoard({ title, slides, setSlides, index, setIndex, layou
   const current = slides[index] ?? slides[0];
   const currentParent = parentOf(slides, index);
 
+  const last = slides.length - 1;
+  const goTo = (value: number) => setIndex(Math.min(last, Math.max(0, value)));
+
+  const startPresenting = () => {
+    setEditing(false);
+    setPresenting(true);
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  const stopPresenting = () => {
+    setPresenting(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  };
+
+  const onPresentKey = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown' || event.key === 'Enter') { event.preventDefault(); goTo(index + 1); }
+    else if (event.key === 'ArrowLeft' || event.key === 'PageUp' || event.key === 'Backspace') { event.preventDefault(); goTo(index - 1); }
+    else if (event.key === 'Home') { event.preventDefault(); goTo(0); }
+    else if (event.key === 'End') { event.preventDefault(); goTo(last); }
+    else if (event.key === 'Escape') stopPresenting();
+  });
+
+  const onFullscreenChange = useEffectEvent(() => {
+    if (!document.fullscreenElement) setPresenting(false);
+  });
+
   useEffect(() => {
     if (!presenting) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') { event.preventDefault(); setIndex((value) => Math.min(slides.length - 1, value + 1)); }
-      if (event.key === 'ArrowLeft' || event.key === 'PageUp') { event.preventDefault(); setIndex((value) => Math.max(0, value - 1)); }
-      if (event.key === 'Escape') setPresenting(false);
-    };
+    const onKey = (event: KeyboardEvent) => onPresentKey(event);
+    const onChange = () => onFullscreenChange();
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [presenting, setIndex, slides.length]);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('fullscreenchange', onChange);
+      document.body.style.overflow = overflow;
+    };
+  }, [presenting]);
+
+  const move = (direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target > last) return;
+    setSlides((list) => {
+      const next = [...list];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setIndex(target);
+    onNotify(direction < 0 ? 'Bloco movido para cima' : 'Bloco movido para baixo');
+  };
 
   const update = (patch: Partial<Slide>) => setSlides((list) => list.map((slide, i) => (i === index ? { ...slide, ...patch } : slide)));
   const add = () => {
@@ -120,7 +161,7 @@ export function TeachingBoard({ title, slides, setSlides, index, setIndex, layou
           </div>
           <div className="board-actions">
             <button type="button" className="btn btn-sm" onClick={() => setEditing((value) => !value)}>{editing ? <><Check size={13} aria-hidden="true" /> Ver aula</> : <><Pencil size={13} aria-hidden="true" /> Editar bloco</>}</button>
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => { setEditing(false); setPresenting(true); }}><Play size={13} aria-hidden="true" /> Apresentar</button>
+            <button type="button" className="btn btn-sm btn-primary" onClick={startPresenting} title="Apresentar em tela cheia"><Play size={13} aria-hidden="true" /> Apresentar</button>
           </div>
         </div>
         <div className="lesson-stage">
@@ -150,7 +191,11 @@ export function TeachingBoard({ title, slides, setSlides, index, setIndex, layou
                   ))}
                 </div>
               </div>
-              <button type="button" className="btn btn-sm btn-danger" onClick={remove}><Trash2 size={13} aria-hidden="true" /> Excluir este bloco</button>
+              <div className="prop-actions">
+                <button type="button" className="btn btn-sm" onClick={() => move(-1)} disabled={index === 0}><ArrowUp size={13} aria-hidden="true" /> Mover para cima</button>
+                <button type="button" className="btn btn-sm" onClick={() => move(1)} disabled={index >= last}><ArrowDown size={13} aria-hidden="true" /> Mover para baixo</button>
+                <button type="button" className="btn btn-sm btn-danger" onClick={remove}><Trash2 size={13} aria-hidden="true" /> Excluir este bloco</button>
+              </div>
             </form>
           ) : <SketchBoard slides={slides} index={index} onIndex={setIndex} layout={layout} />}
         </div>
@@ -178,13 +223,13 @@ export function TeachingBoard({ title, slides, setSlides, index, setIndex, layou
             <div className="presentation-tools">
               <span className="presentation-layout-label">{layout === 'linear' ? 'SEQUÊNCIA' : layout === 'tree-reverse' ? 'FLUXO INVERTIDO' : 'RAIZ · TOPO PARA BAIXO'}</span>
               <span className="presentation-count">{String(index + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}</span>
-              <button type="button" className="btn btn-sm" onClick={() => setPresenting(false)}><X size={13} aria-hidden="true" /> Sair <span className="kbd">Esc</span></button>
+              <button type="button" className="btn btn-sm" onClick={stopPresenting}><X size={13} aria-hidden="true" /> Sair <span className="kbd">Esc</span></button>
             </div>
           </header>
           <div className="presentation-stage"><SketchBoard slides={slides} index={index} onIndex={setIndex} large layout={layout} /></div>
           <footer className="presentation-controls">
             <button type="button" className="btn" disabled={index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}><ArrowLeft size={15} aria-hidden="true" /> Anterior</button>
-            <div className="presentation-progress"><span style={{ width: `${((index + 1) / slides.length) * 100}%` }} /></div>
+            <div className="presentation-progress" role="progressbar" aria-valuemin={1} aria-valuemax={slides.length} aria-valuenow={index + 1} aria-label="Progresso da aula"><span style={{ width: `${((index + 1) / slides.length) * 100}%` }} /></div>
             <span className="presentation-step">BLOCO {String(index + 1).padStart(2, '0')}</span>
             <button type="button" className="btn btn-primary" disabled={index >= slides.length - 1} onClick={() => setIndex((value) => Math.min(slides.length - 1, value + 1))}>
               {index >= slides.length - 1 ? 'Aula completa' : 'Próximo bloco'} {index < slides.length - 1 && <ArrowRight size={15} aria-hidden="true" />}

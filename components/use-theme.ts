@@ -12,7 +12,6 @@ function subscribe(callback: () => void) {
   };
 }
 
-/** Tema ativo, lido do atributo data-theme da página. */
 export function useTheme(): ThemeId {
   return useSyncExternalStore(subscribe, readTheme, () => DEFAULT_THEME);
 }

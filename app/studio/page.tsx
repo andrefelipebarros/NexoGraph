@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import StudioClient from './studio-client';
+
+export const metadata: Metadata = { title: 'Estúdio' };
 
 export default function StudioPage() {
   return (

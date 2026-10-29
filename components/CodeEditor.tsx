@@ -7,7 +7,6 @@ import { renderToken } from './code-tokens';
 
 export type CodeEditorHandle = {
   focus: () => void;
-  /** Insere texto no cursor. Com `newLine`, coloca o trecho em uma linha nova, na mesma indentação. */
   insert: (text: string, options?: { newLine?: boolean }) => void;
   goToLine: (line: number) => void;
 };
@@ -29,7 +28,6 @@ const CLOSERS = new Set([']', ')', '}', '"']);
 
 function exec(textarea: HTMLTextAreaElement, text: string) {
   textarea.focus();
-  // execCommand mantém o histórico de desfazer (Ctrl+Z) do navegador.
   const done = document.execCommand('insertText', false, text);
   if (!done) {
     textarea.setRangeText(text, textarea.selectionStart, textarea.selectionEnd, 'end');

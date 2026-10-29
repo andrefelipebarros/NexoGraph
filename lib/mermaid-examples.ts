@@ -88,7 +88,6 @@ export const mermaidExamples: MermaidExample[] = [
 
 export const defaultMermaidSource = mermaidExamples[0].source;
 
-/** Trechos que o painel "Inserir" coloca no cursor. */
 export const mermaidSnippets: { label: string; hint: string; text: string }[] = [
   { label: 'Caixa', hint: 'Nó retangular', text: 'A[Texto]' },
   { label: 'Decisão', hint: 'Losango com pergunta', text: 'B{Pergunta?}' },

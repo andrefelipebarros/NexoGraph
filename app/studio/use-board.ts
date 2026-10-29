@@ -6,58 +6,99 @@ import type { Edge, ShapeKind, ShapeNode } from './types';
 
 type Snapshot = { nodes: ShapeNode[]; edges: Edge[] };
 
-/** Estado do quadro manual: formas, conexões, seleção e histórico de desfazer. */
-export function useBoard(notify: (message: string) => void) {
-  const [nodes, setNodes] = useState<ShapeNode[]>(initialNodes);
-  const [edges, setEdges] = useState<Edge[]>(initialEdges);
+const HISTORY_LIMIT = 80;
+
+const shapeTitles: Record<ShapeKind, string> = {
+  process: 'Novo elemento',
+  decision: 'Decisão?',
+  database: 'Banco de dados',
+  note: 'Escreva uma nota',
+  actor: 'Pessoa',
+  terminator: 'Início ou fim',
+};
+
+export function useBoard(notify: (message: string) => void, initial?: Partial<Snapshot>) {
+  const [nodes, setNodes] = useState<ShapeNode[]>(() => initial?.nodes ?? initialNodes);
+  const [edges, setEdges] = useState<Edge[]>(() => initial?.edges ?? initialEdges);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
-  const [canUndo, setCanUndo] = useState(false);
+  const [historySize, setHistorySize] = useState({ undo: 0, redo: 0 });
   const [revision, setRevision] = useState(0);
-  const history = useRef<Snapshot[]>([]);
+  const past = useRef<Snapshot[]>([]);
+  const future = useRef<Snapshot[]>([]);
   const latest = useRef<Snapshot>({ nodes, edges });
 
   useEffect(() => { latest.current = { nodes, edges }; }, [nodes, edges]);
 
+  const syncHistory = useCallback(() => {
+    setHistorySize({ undo: past.current.length, redo: future.current.length });
+  }, []);
+
   const snapshot = useCallback(() => {
-    history.current.push({ nodes: latest.current.nodes, edges: latest.current.edges });
-    if (history.current.length > 60) history.current.shift();
-    setCanUndo(true);
+    past.current.push({ nodes: latest.current.nodes, edges: latest.current.edges });
+    if (past.current.length > HISTORY_LIMIT) past.current.shift();
+    future.current = [];
+    syncHistory();
+  }, [syncHistory]);
+
+  const restore = useCallback((target: Snapshot) => {
+    setNodes(target.nodes);
+    setEdges(target.edges);
+    setSelectedIds((current) => current.filter((id) => target.nodes.some((node) => node.id === id)));
+    setSelectedEdgeId(null);
   }, []);
 
   const undo = useCallback(() => {
-    const previous = history.current.pop();
+    const previous = past.current.pop();
     if (!previous) { notify('Não há nada para desfazer'); return; }
-    setNodes(previous.nodes);
-    setEdges(previous.edges);
-    setSelectedIds([]);
-    setSelectedEdgeId(null);
-    setCanUndo(history.current.length > 0);
+    future.current.push({ nodes: latest.current.nodes, edges: latest.current.edges });
+    restore(previous);
+    syncHistory();
     notify('Ação desfeita');
-  }, [notify]);
+  }, [notify, restore, syncHistory]);
+
+  const redo = useCallback(() => {
+    const next = future.current.pop();
+    if (!next) { notify('Não há nada para refazer'); return; }
+    past.current.push({ nodes: latest.current.nodes, edges: latest.current.edges });
+    restore(next);
+    syncHistory();
+    notify('Ação refeita');
+  }, [notify, restore, syncHistory]);
 
   const selectNode = useCallback((id: string, additive: boolean) => {
     setSelectedEdgeId(null);
     setSelectedIds((current) => (additive ? (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]) : [id]));
   }, []);
 
+  const selectEdge = useCallback((id: string) => {
+    setSelectedIds([]);
+    setSelectedEdgeId(id);
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedEdgeId(null);
+    setSelectedIds(latest.current.nodes.map((node) => node.id));
+  }, []);
+
   const clearSelection = useCallback(() => { setSelectedIds([]); setSelectedEdgeId(null); }, []);
 
-  const addShape = useCallback((kind: ShapeKind = 'process') => {
+  const addShape = useCallback((kind: ShapeKind = 'process', position?: { x: number; y: number }) => {
     snapshot();
     const label = shapeOptions.find((shape) => shape.kind === kind)?.label || 'Forma';
     const count = latest.current.nodes.length;
-    const titles: Record<ShapeKind, string> = { process: 'Novo elemento', decision: 'Decisão?', database: 'Banco de dados', note: 'Escreva uma nota', actor: 'Pessoa', terminator: 'Início ou fim' };
+    const w = kind === 'note' ? 185 : 165;
+    const h = kind === 'note' ? 100 : kind === 'actor' ? 92 : 76;
     const node: ShapeNode = {
       id: createId('node'),
-      title: titles[kind],
+      title: shapeTitles[kind],
       kind,
-      x: 130 + (count % 5) * 42,
-      y: 110 + (count % 6) * 39,
-      w: kind === 'note' ? 185 : 165,
-      h: kind === 'note' ? 100 : kind === 'actor' ? 92 : 76,
+      x: position ? Math.max(0, Math.round(position.x - w / 2)) : 130 + (count % 5) * 42,
+      y: position ? Math.max(0, Math.round(position.y - h / 2)) : 110 + (count % 6) * 39,
+      w,
+      h,
       color: paletteValues[count % paletteValues.length],
     };
     setNodes((current) => [...current, node]);
@@ -66,7 +107,7 @@ export function useBoard(notify: (message: string) => void) {
     notify(`${label} adicionada ao quadro`);
   }, [notify, snapshot]);
 
-  const replaceBoard = useCallback((next: { nodes: ShapeNode[]; edges: Edge[] }) => {
+  const replaceBoard = useCallback((next: Snapshot) => {
     snapshot();
     setNodes(next.nodes);
     setEdges(next.edges);
@@ -77,17 +118,16 @@ export function useBoard(notify: (message: string) => void) {
     setRevision((value) => value + 1);
   }, [snapshot]);
 
-  const moveNode = useCallback((id: string, x: number, y: number) => {
-    setNodes((current) => current.map((node) => (node.id === id ? { ...node, x, y } : node)));
-  }, []);
-
   const updateSelected = useCallback((patch: Partial<ShapeNode>) => {
     setNodes((current) => current.map((node) => (selectedIds.includes(node.id) ? { ...node, ...patch } : node)));
   }, [selectedIds]);
 
   const renameNode = useCallback((id: string, title: string) => {
+    const before = latest.current.nodes.find((node) => node.id === id);
+    const nextTitle = title || 'Elemento';
+    if (!before || before.title === nextTitle) return;
     snapshot();
-    setNodes((current) => current.map((node) => (node.id === id ? { ...node, title: title || 'Elemento' } : node)));
+    setNodes((current) => current.map((node) => (node.id === id ? { ...node, title: nextTitle } : node)));
   }, [snapshot]);
 
   const connect = useCallback((from: string, to: string) => {
@@ -102,7 +142,6 @@ export function useBoard(notify: (message: string) => void) {
     return true;
   }, [notify, snapshot]);
 
-  /** Botão "Conectar": liga os dois selecionados, ou liga o modo de clicar origem e destino. */
   const toggleConnect = useCallback(() => {
     if (selectedIds.length === 2) { connect(selectedIds[0], selectedIds[1]); return; }
     setConnecting((value) => !value);
@@ -130,7 +169,7 @@ export function useBoard(notify: (message: string) => void) {
     setNodes((current) => current.filter((node) => !selectedIds.includes(node.id)));
     setEdges((current) => current.filter((edge) => !selectedIds.includes(edge.from) && !selectedIds.includes(edge.to)));
     setSelectedIds([]);
-    notify(selectedIds.length > 1 ? 'Elementos removidos' : 'Elemento removido');
+    notify(selectedIds.length > 1 ? `${selectedIds.length} elementos removidos` : 'Elemento removido');
   }, [notify, selectedEdgeId, selectedIds, snapshot]);
 
   const duplicateSelection = useCallback(() => {
@@ -145,8 +184,13 @@ export function useBoard(notify: (message: string) => void) {
     setNodes((current) => [...current, ...copies]);
     setEdges((current) => [...current, ...copiedEdges]);
     setSelectedIds(copies.map((node) => node.id));
-    notify('Elemento duplicado');
+    notify(copies.length > 1 ? `${copies.length} elementos duplicados` : 'Elemento duplicado');
   }, [notify, selectedIds, snapshot]);
+
+  const nudgeSelection = useCallback((dx: number, dy: number) => {
+    if (!selectedIds.length) return;
+    setNodes((current) => current.map((node) => (selectedIds.includes(node.id) ? { ...node, x: Math.max(0, node.x + dx), y: Math.max(0, node.y + dy) } : node)));
+  }, [selectedIds]);
 
   const updateEdge = useCallback((id: string, patch: Partial<Edge>) => {
     setEdges((current) => current.map((edge) => (edge.id === id ? { ...edge, ...patch } : edge)));
@@ -155,14 +199,17 @@ export function useBoard(notify: (message: string) => void) {
   const reverseEdge = useCallback((id: string) => {
     snapshot();
     setEdges((current) => current.map((edge) => (edge.id === id ? { ...edge, from: edge.to, to: edge.from } : edge)));
-  }, [snapshot]);
+    notify('Sentido da seta invertido');
+  }, [notify, snapshot]);
 
   return {
     nodes, edges, setNodes, setEdges,
     selectedIds, setSelectedIds, selectedEdgeId, setSelectedEdgeId,
-    connecting, connectFrom, canUndo, revision,
-    snapshot, undo, selectNode, clearSelection, addShape, replaceBoard, moveNode, updateSelected, renameNode,
-    connect, toggleConnect, connectClick, cancelConnect, deleteSelection, duplicateSelection, updateEdge, reverseEdge,
+    connecting, connectFrom, revision,
+    canUndo: historySize.undo > 0,
+    canRedo: historySize.redo > 0,
+    snapshot, undo, redo, selectNode, selectEdge, selectAll, clearSelection, addShape, replaceBoard, updateSelected, renameNode,
+    connect, toggleConnect, connectClick, cancelConnect, deleteSelection, duplicateSelection, nudgeSelection, updateEdge, reverseEdge,
   };
 }
 

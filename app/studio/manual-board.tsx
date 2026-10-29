@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { ArrowLeftRight, Braces, Cable, Copy, Focus, Eraser, Layers, Plus, RotateCcw, Search, Trash2, Undo2, User, X } from 'lucide-react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { ArrowLeftRight, Braces, Cable, Copy, Focus, Eraser, Layers, Maximize, Minus, Plus, Redo2, RotateCcw, Search, Trash2, Undo2, User, X } from 'lucide-react';
 import { catalog, catalogFamilies, type CatalogItem } from './catalog';
 import { boardFromCatalog } from './templates';
 import { colorPalette, edgeLine, initialEdges, initialNodes, shapeOptions } from './types';
@@ -21,6 +21,10 @@ function readHint() {
 }
 const STAGE_W = 1500;
 const STAGE_H = 1050;
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 2;
+const clampZoom = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 100) / 100));
+const labelWidth = (text: string) => Math.round(text.length * 6.9 + 16);
 
 type Props = {
   board: Board;
@@ -28,30 +32,32 @@ type Props = {
   onTitle: (title: string) => void;
   onNotify: (message: string) => void;
   onGenerateMermaid: () => void;
-  /** Fica verdadeiro quando o que estava salvo já foi carregado. */
-  ready: boolean;
 };
 
 type DragState = { id: string; sx: number; sy: number; moved: boolean; origins: Map<string, { x: number; y: number }> };
+type PanState = { x: number; y: number; left: number; top: number; moved: boolean; pointerId: number };
 
 function ShapeIcon({ kind }: { kind: ShapeKind }) {
   const option = shapeOptions.find((item) => item.kind === kind) ?? shapeOptions[0];
   return <option.Icon size={15} aria-hidden="true" />;
 }
 
-export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMermaid, ready }: Props) {
+export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMermaid }: Props) {
   const { nodes, edges, selectedIds, selectedEdgeId } = board;
   const stageRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const panRef = useRef<PanState | null>(null);
   const editStart = useRef(false);
+  const [zoom, setZoom] = useState(1);
+  const [panning, setPanning] = useState(false);
   const [search, setSearch] = useState('');
   const [family, setFamily] = useState('Todos');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const hintOpen = useSyncExternalStore(subscribeHint, readHint, () => false);
   const dismissHint = () => {
-    try { localStorage.setItem(HINT_KEY, 'dismissed'); } catch { /* sem armazenamento */ }
+    try { localStorage.setItem(HINT_KEY, 'dismissed'); } catch {}
     window.dispatchEvent(new Event(HINT_EVENT));
   };
 
@@ -60,60 +66,121 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
     return catalog.filter((item) => (family === 'Todos' || item.family === family) && `${item.title} ${item.description} ${item.family}`.toLowerCase().includes(term));
   }, [family, search]);
 
-  const selectedNode = nodes.find((node) => node.id === selectedIds[0]);
+  const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
+  const selectedNode = selectedIds.length ? nodeById.get(selectedIds[0]) : undefined;
   const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
-  const nodeTitle = (id: string) => nodes.find((node) => node.id === id)?.title ?? '?';
+  const nodeTitle = (id: string) => nodeById.get(id)?.title ?? '?';
   const connectedEdges = selectedNode ? edges.filter((edge) => edge.from === selectedNode.id || edge.to === selectedNode.id) : [];
 
-  // Atalhos de teclado do quadro.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
-      const mod = event.ctrlKey || event.metaKey;
-      if ((event.key === 'Delete' || event.key === 'Backspace') && !mod) { event.preventDefault(); board.deleteSelection(); }
-      else if (event.key === 'Escape') { board.cancelConnect(); board.clearSelection(); }
-      else if (mod && event.key.toLowerCase() === 'z') { event.preventDefault(); board.undo(); }
-      else if (mod && event.key.toLowerCase() === 'd') { event.preventDefault(); board.duplicateSelection(); }
-      else if (event.key.startsWith('Arrow') && board.selectedIds.length) {
-        event.preventDefault();
-        const step = event.shiftKey ? 1 : 8;
-        const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0;
-        const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
-        board.setNodes((current) => current.map((node) => (board.selectedIds.includes(node.id) ? { ...node, x: Math.max(0, node.x + dx), y: Math.max(0, node.y + dy) } : node)));
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+  const zoomTo = (value: number, anchor?: { x: number; y: number }) => {
+    const viewport = viewportRef.current;
+    const next = clampZoom(value);
+    if (!viewport || next === zoom) { setZoom(next); return; }
+    const point = anchor ?? { x: viewport.clientWidth / 2, y: viewport.clientHeight / 2 };
+    const worldX = (viewport.scrollLeft + point.x) / zoom;
+    const worldY = (viewport.scrollTop + point.y) / zoom;
+    setZoom(next);
+    requestAnimationFrame(() => {
+      viewport.scrollLeft = worldX * next - point.x;
+      viewport.scrollTop = worldY * next - point.y;
+    });
+  };
+  const zoomBy = (delta: number, anchor?: { x: number; y: number }) => zoomTo(zoom + delta, anchor);
+
+  const onWindowKey = useEffectEvent((event: KeyboardEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('input, textarea, select, [contenteditable="true"]') || document.querySelector('[aria-modal="true"]')) return;
+    const mod = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
+    if ((event.key === 'Delete' || event.key === 'Backspace') && !mod) { event.preventDefault(); board.deleteSelection(); }
+    else if (event.key === 'Escape') { board.cancelConnect(); board.clearSelection(); }
+    else if (mod && key === 'z') { event.preventDefault(); if (event.shiftKey) board.redo(); else board.undo(); }
+    else if (mod && key === 'y') { event.preventDefault(); board.redo(); }
+    else if (mod && key === 'd') { event.preventDefault(); board.duplicateSelection(); }
+    else if (mod && key === 'a') { event.preventDefault(); board.selectAll(); }
+    else if (mod && (key === '=' || key === '+')) { event.preventDefault(); zoomBy(0.1); }
+    else if (mod && key === '-') { event.preventDefault(); zoomBy(-0.1); }
+    else if (mod && key === '0') { event.preventDefault(); zoomTo(1); }
+    else if (event.key.startsWith('Arrow') && board.selectedIds.length) {
+      event.preventDefault();
+      if (!event.repeat) board.snapshot();
+      const step = event.shiftKey ? 1 : 8;
+      const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0;
+      const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
+      board.nudgeSelection(dx, dy);
+    }
   });
 
-  /** Move o diagrama inteiro para o meio da área visível do quadro. */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => onWindowKey(event);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const onWheel = useEffectEvent((event: WheelEvent) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const rect = viewport.getBoundingClientRect();
+    zoomBy(event.deltaY < 0 ? 0.1 : -0.1, { x: event.clientX - rect.left, y: event.clientY - rect.top });
+  });
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const listener = (event: WheelEvent) => onWheel(event);
+    viewport.addEventListener('wheel', listener, { passive: false });
+    return () => viewport.removeEventListener('wheel', listener);
+  }, []);
+
+  const bounds = () => {
+    if (!nodes.length) return null;
+    return {
+      minX: Math.min(...nodes.map((node) => node.x)),
+      minY: Math.min(...nodes.map((node) => node.y)),
+      maxX: Math.max(...nodes.map((node) => node.x + node.w)),
+      maxY: Math.max(...nodes.map((node) => node.y + node.h)),
+    };
+  };
+
   const centerDiagram = (remember: boolean) => {
     const viewport = viewportRef.current;
-    if (!viewport || !board.nodes.length) return;
-    const minX = Math.min(...board.nodes.map((node) => node.x));
-    const minY = Math.min(...board.nodes.map((node) => node.y));
-    const maxX = Math.max(...board.nodes.map((node) => node.x + node.w));
-    const maxY = Math.max(...board.nodes.map((node) => node.y + node.h));
-    const targetX = viewport.scrollLeft + viewport.clientWidth / 2;
-    const targetY = viewport.scrollTop + viewport.clientHeight / 2;
-    // Se o diagrama for maior que a janela, alinha com uma margem em vez de cortar o começo.
-    const dx = Math.round(Math.max(40 - minX, targetX - (minX + maxX) / 2));
-    const dy = Math.round(Math.max(40 - minY, targetY - (minY + maxY) / 2));
+    const box = bounds();
+    if (!viewport || !box) return;
+    const targetX = (viewport.scrollLeft + viewport.clientWidth / 2) / zoom;
+    const targetY = (viewport.scrollTop + viewport.clientHeight / 2) / zoom;
+    const dx = Math.round(Math.max(40 - box.minX, targetX - (box.minX + box.maxX) / 2));
+    const dy = Math.round(Math.max(40 - box.minY, targetY - (box.minY + box.maxY) / 2));
     if (dx === 0 && dy === 0) { if (remember) onNotify('O diagrama já está centralizado'); return; }
     if (remember) board.snapshot();
     board.setNodes((current) => current.map((node) => ({ ...node, x: Math.max(0, node.x + dx), y: Math.max(0, node.y + dy) })));
     if (remember) onNotify('Diagrama centralizado');
   };
-  const centerRef = useRef(centerDiagram);
-  useEffect(() => { centerRef.current = centerDiagram; });
 
-  // Centraliza quando o quadro abre, depois que o salvo é carregado e quando um modelo troca o quadro.
+  const fitView = () => {
+    const viewport = viewportRef.current;
+    const box = bounds();
+    if (!viewport || !box) return;
+    const width = box.maxX - box.minX + 120;
+    const height = box.maxY - box.minY + 120;
+    const next = clampZoom(Math.min(viewport.clientWidth / width, viewport.clientHeight / height, 1.25));
+    setZoom(next);
+    requestAnimationFrame(() => {
+      viewport.scrollTo({
+        left: ((box.minX + box.maxX) / 2) * next - viewport.clientWidth / 2,
+        top: ((box.minY + box.maxY) / 2) * next - viewport.clientHeight / 2,
+        behavior: 'smooth',
+      });
+    });
+  };
+
+  const onOpenCenter = useEffectEvent(() => centerDiagram(false));
+
   useEffect(() => {
-    if (!ready) return;
-    const frame = requestAnimationFrame(() => centerRef.current(false));
+    const frame = requestAnimationFrame(() => onOpenCenter());
     return () => cancelAnimationFrame(frame);
-  }, [ready, board.revision]);
+  }, [board.revision]);
 
   const startEditing = (node: ShapeNode) => { setEditingId(node.id); setEditingText(node.title); };
   const commitEditing = () => {
@@ -136,8 +203,8 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
   const onNodeMove = (event: ReactPointerEvent<HTMLDivElement>, node: ShapeNode) => {
     const drag = dragRef.current;
     if (!drag || drag.id !== node.id) return;
-    const dx = event.clientX - drag.sx;
-    const dy = event.clientY - drag.sy;
+    const dx = (event.clientX - drag.sx) / zoom;
+    const dy = (event.clientY - drag.sy) / zoom;
     if (!drag.moved) {
       if (Math.hypot(dx, dy) < 4) return;
       drag.moved = true;
@@ -155,6 +222,49 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
   const onNodeKey = (event: ReactKeyboardEvent<HTMLDivElement>, node: ShapeNode) => {
     if (event.key === 'Enter') { event.preventDefault(); startEditing(node); }
     if (event.key === ' ') { event.preventDefault(); board.selectNode(node.id, event.shiftKey); }
+  };
+
+  const isBackground = (target: EventTarget) => {
+    const element = target as Element;
+    return element === stageRef.current || element.classList.contains('canvas-world') || element.closest('.canvas-grid') !== null;
+  };
+
+  const onStageDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const viewport = viewportRef.current;
+    if (!viewport || !isBackground(event.target) || (event.button !== 0 && event.button !== 1)) return;
+    panRef.current = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop, moved: false, pointerId: event.pointerId };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onStageMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pan = panRef.current;
+    const viewport = viewportRef.current;
+    if (!pan || !viewport || pan.pointerId !== event.pointerId) return;
+    const dx = event.clientX - pan.x;
+    const dy = event.clientY - pan.y;
+    if (!pan.moved && Math.hypot(dx, dy) < 4) return;
+    if (!pan.moved) { pan.moved = true; setPanning(true); }
+    viewport.scrollLeft = pan.left - dx;
+    viewport.scrollTop = pan.top - dy;
+  };
+  const onStageUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pan = panRef.current;
+    if (!pan || pan.pointerId !== event.pointerId) return;
+    panRef.current = null;
+    setPanning(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!pan.moved) {
+      board.clearSelection();
+      if (board.connecting && board.connectFrom) board.cancelConnect();
+    }
+  };
+  const onStageDoubleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const viewport = viewportRef.current;
+    if (!viewport || !isBackground(event.target) || board.connecting) return;
+    const rect = viewport.getBoundingClientRect();
+    board.addShape('process', {
+      x: (event.clientX - rect.left + viewport.scrollLeft) / zoom,
+      y: (event.clientY - rect.top + viewport.scrollTop) / zoom,
+    });
   };
 
   const guard = (change: () => void) => {
@@ -186,7 +296,7 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
         onPointerMove={(event) => onNodeMove(event, node)}
         onPointerUp={onNodeUp}
         onPointerCancel={onNodeUp}
-        onDoubleClick={() => startEditing(node)}
+        onDoubleClick={(event) => { event.stopPropagation(); startEditing(node); }}
         onKeyDown={(event) => onNodeKey(event, node)}
       >
         {node.kind === 'decision' && (
@@ -273,7 +383,10 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
         <div className="board-toolbar">
           <div className="crumb"><span>Quadro</span><span aria-hidden="true">/</span><strong>{boardTitle}</strong></div>
           <div className="board-actions">
-            <button type="button" className="btn btn-sm" onClick={board.undo} disabled={!board.canUndo} title="Desfazer (Ctrl+Z)"><Undo2 size={13} aria-hidden="true" /> Desfazer</button>
+            <div className="btn-group" role="group" aria-label="Histórico">
+              <button type="button" className="btn btn-sm" onClick={board.undo} disabled={!board.canUndo} title="Desfazer (Ctrl+Z)"><Undo2 size={13} aria-hidden="true" /> <span className="btn-label">Desfazer</span></button>
+              <button type="button" className="btn btn-sm" onClick={board.redo} disabled={!board.canRedo} title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer"><Redo2 size={13} aria-hidden="true" /></button>
+            </div>
             <button type="button" className="btn btn-sm" onClick={() => centerDiagram(true)} disabled={!nodes.length} title="Colocar o diagrama no meio da tela"><Focus size={13} aria-hidden="true" /> Centralizar</button>
             <button type="button" className="btn btn-sm" onClick={board.duplicateSelection} disabled={!selectedIds.length} title="Duplicar (Ctrl+D)"><Copy size={13} aria-hidden="true" /> Duplicar</button>
             <button type="button" className="btn btn-sm" onClick={() => { board.replaceBoard({ nodes: [], edges: [] }); onTitle('Quadro em branco'); onNotify('Quadro limpo. Use Desfazer para voltar.'); }} title="Apagar tudo"><Eraser size={13} aria-hidden="true" /> Limpar</button>
@@ -281,42 +394,73 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
             <button type="button" className="btn btn-sm btn-primary" onClick={onGenerateMermaid} title="Transformar este quadro em código Mermaid"><Braces size={13} aria-hidden="true" /> Gerar código Mermaid</button>
           </div>
         </div>
-        <div ref={viewportRef} className={`canvas-viewport${board.connecting ? ' is-connecting' : ''}`}>
-          <div className="canvas-stage" ref={stageRef} onPointerDown={(event) => { if (event.target === event.currentTarget || (event.target as Element).tagName === 'svg') { board.clearSelection(); if (board.connecting && board.connectFrom) board.cancelConnect(); } }}>
-            <svg className="canvas-grid" width="100%" height="100%" aria-hidden="true">
-              <defs>
-                <pattern id="grid-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" /></pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid-dots)" />
-            </svg>
-            <svg className="connections-layer" width={STAGE_W} height={STAGE_H} aria-label="Setas do diagrama">
-              <defs>
-                <marker id="arrow-edge" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="11" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" className="arrow-fill" /></marker>
-                <marker id="arrow-edge-sel" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="11" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" className="arrow-fill-sel" /></marker>
-              </defs>
-              {edges.map((edge) => {
-                const from = nodes.find((node) => node.id === edge.from);
-                const to = nodes.find((node) => node.id === edge.to);
-                if (!from || !to) return null;
-                const { x1, y1, x2, y2 } = edgeLine(from, to);
-                const isSelected = edge.id === selectedEdgeId;
-                return (
-                  <g key={edge.id} className={`edge${isSelected ? ' is-selected' : ''}`} onPointerDown={(event) => { event.stopPropagation(); board.setSelectedIds([]); board.setSelectedEdgeId(edge.id); }}>
-                    <line className="edge-hit" x1={x1} y1={y1} x2={x2} y2={y2} />
-                    <line className="edge-line" x1={x1} y1={y1} x2={x2} y2={y2} markerEnd={isSelected ? 'url(#arrow-edge-sel)' : 'url(#arrow-edge)'} />
-                    {edge.label && <text className="edge-label" x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 9} textAnchor="middle">{edge.label}</text>}
-                  </g>
-                );
-              })}
-            </svg>
-            {nodes.map(renderNode)}
-            {nodes.length === 0 && (
-              <div className="empty-canvas">
-                <h2>Seu quadro está vazio</h2>
-                <p>Escolha uma forma na barra à esquerda ou comece de um modelo da biblioteca.</p>
-                <button type="button" className="btn btn-primary" onClick={() => board.addShape('process')}><Plus size={15} aria-hidden="true" /> Adicionar a primeira caixa</button>
+        <div className="canvas-wrap">
+          <div ref={viewportRef} className={`canvas-viewport${board.connecting ? ' is-connecting' : ''}${panning ? ' is-panning' : ''}`}>
+            <div
+              className="canvas-stage"
+              ref={stageRef}
+              style={{ width: STAGE_W * zoom, height: STAGE_H * zoom }}
+              onPointerDown={onStageDown}
+              onPointerMove={onStageMove}
+              onPointerUp={onStageUp}
+              onPointerCancel={onStageUp}
+              onDoubleClick={onStageDoubleClick}
+            >
+              <div className="canvas-world" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${zoom})` }}>
+                <svg className="canvas-grid" width="100%" height="100%" aria-hidden="true">
+                  <defs>
+                    <pattern id="grid-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" /></pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid-dots)" />
+                </svg>
+                <svg className="connections-layer" width={STAGE_W} height={STAGE_H} aria-label="Setas do diagrama">
+                  <defs>
+                    <marker id="arrow-edge" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="11" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" className="arrow-fill" /></marker>
+                    <marker id="arrow-edge-sel" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="11" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" className="arrow-fill-sel" /></marker>
+                  </defs>
+                  {edges.map((edge) => {
+                    const from = nodeById.get(edge.from);
+                    const to = nodeById.get(edge.to);
+                    if (!from || !to) return null;
+                    const { x1, y1, x2, y2 } = edgeLine(from, to);
+                    const isSelected = edge.id === selectedEdgeId;
+                    const label = edge.label?.trim();
+                    const width = label ? labelWidth(label) : 0;
+                    const lift = Math.hypot(x2 - x1, y2 - y1) < width + 24 && Math.abs(y2 - y1) < Math.abs(x2 - x1) ? 20 : 0;
+                    const mx = (x1 + x2) / 2;
+                    const my = (y1 + y2) / 2 - lift;
+                    return (
+                      <g key={edge.id} className={`edge${isSelected ? ' is-selected' : ''}`} onPointerDown={(event) => { event.stopPropagation(); board.selectEdge(edge.id); }}>
+                        <line className="edge-hit" x1={x1} y1={y1} x2={x2} y2={y2} />
+                        <line className="edge-line" x1={x1} y1={y1} x2={x2} y2={y2} markerEnd={isSelected ? 'url(#arrow-edge-sel)' : 'url(#arrow-edge)'} />
+                        {label && (
+                          <g className="edge-tag">
+                            <rect x={mx - width / 2} y={my - 11} width={width} height={22} rx={11} />
+                            <text x={mx} y={my + 4} textAnchor="middle">{label}</text>
+                          </g>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+                {nodes.map(renderNode)}
               </div>
-            )}
+            </div>
+          </div>
+          {nodes.length === 0 && (
+            <div className="empty-canvas">
+              <span className="empty-icon" aria-hidden="true"><Plus size={22} /></span>
+              <h2>Seu quadro está vazio</h2>
+              <p>Escolha uma forma na barra à esquerda, dê dois cliques em qualquer ponto da folha ou comece de um modelo da biblioteca.</p>
+              <button type="button" className="btn btn-primary" onClick={() => board.addShape('process')}><Plus size={15} aria-hidden="true" /> Adicionar a primeira caixa</button>
+            </div>
+          )}
+          <div className="canvas-zoom" role="group" aria-label="Zoom do quadro">
+            <button type="button" className="icon-btn" onClick={() => zoomBy(-0.1)} disabled={zoom <= MIN_ZOOM} aria-label="Diminuir zoom" title="Diminuir zoom (Ctrl + -)"><Minus size={14} aria-hidden="true" /></button>
+            <button type="button" className="canvas-zoom-value" onClick={() => zoomTo(1)} title="Voltar para 100% (Ctrl + 0)">{Math.round(zoom * 100)}%</button>
+            <button type="button" className="icon-btn" onClick={() => zoomBy(0.1)} disabled={zoom >= MAX_ZOOM} aria-label="Aumentar zoom" title="Aumentar zoom (Ctrl + +)"><Plus size={14} aria-hidden="true" /></button>
+            <span className="canvas-zoom-sep" aria-hidden="true" />
+            <button type="button" className="icon-btn" onClick={fitView} disabled={!nodes.length} aria-label="Ajustar o diagrama à tela" title="Ajustar à tela"><Maximize size={14} aria-hidden="true" /></button>
           </div>
         </div>
       </main>
@@ -365,7 +509,7 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
                   <ul className="edge-list">
                     {connectedEdges.map((edge) => (
                       <li key={edge.id}>
-                        <button type="button" onClick={() => { board.setSelectedIds([]); board.setSelectedEdgeId(edge.id); }}>
+                        <button type="button" onClick={() => board.selectEdge(edge.id)}>
                           {edge.from === selectedNode.id ? 'para' : 'de'} <strong>{nodeTitle(edge.from === selectedNode.id ? edge.to : edge.from)}</strong>{edge.label ? <em>{edge.label}</em> : null}
                         </button>
                       </li>
@@ -379,7 +523,16 @@ export function ManualBoard({ board, boardTitle, onTitle, onNotify, onGenerateMe
               </div>
             </div>
           ) : (
-            <p className="side-help">Clique em um elemento ou em uma seta para mudar texto, forma, tamanho e cor. <span className="kbd">Delete</span> remove e <span className="kbd">Ctrl</span> + <span className="kbd">Z</span> desfaz.</p>
+            <div className="props-empty">
+              <p className="side-help">Clique em um elemento ou em uma seta para mudar texto, forma, tamanho e cor.</p>
+              <ul className="shortcut-list">
+                <li><span>Remover</span><span><span className="kbd">Delete</span></span></li>
+                <li><span>Desfazer</span><span><span className="kbd">Ctrl</span> <span className="kbd">Z</span></span></li>
+                <li><span>Refazer</span><span><span className="kbd">Ctrl</span> <span className="kbd">Shift</span> <span className="kbd">Z</span></span></li>
+                <li><span>Selecionar tudo</span><span><span className="kbd">Ctrl</span> <span className="kbd">A</span></span></li>
+                <li><span>Zoom</span><span><span className="kbd">Ctrl</span> + roda do mouse</span></li>
+              </ul>
+            </div>
           )}
         </section>
         <section className="side-block layers">

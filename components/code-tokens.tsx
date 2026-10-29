@@ -1,9 +1,5 @@
 import { BRACKET_COLORS, type Token } from '@/lib/mermaid-highlight';
 
-/**
- * Desenha um token do realce de sintaxe. Fica fora do editor para que a home
- * (componente de servidor) e o editor (componente de cliente) usem o mesmo visual.
- */
 export function renderToken(token: Token, index: number, matched: Set<number>) {
   if (token.cls === 'indent') {
     const width = token.text.replace(/\t/g, '  ').length;

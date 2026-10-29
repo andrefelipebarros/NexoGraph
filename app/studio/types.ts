@@ -17,7 +17,6 @@ export const shapeOptions: { kind: ShapeKind; label: string; hint: string; Icon:
   { kind: 'actor', label: 'Pessoa', hint: 'Usuário ou ator', Icon: User },
 ];
 
-/** Cores de destaque das formas. Funcionam em fundo claro e escuro. */
 export const colorPalette = [
   { value: '#4aa3ff', name: 'Azul' },
   { value: '#3ddc97', name: 'Verde' },
@@ -54,7 +53,6 @@ export function createId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/** Migra aulas antigas para uma sequência explícita de pais, sem perder os dados salvos. */
 export function normalizeLessonSlides(slides: Slide[]): Slide[] {
   return slides.map((slide, index) => {
     const hasParent = Object.prototype.hasOwnProperty.call(slide, 'parentId');
@@ -62,7 +60,6 @@ export function normalizeLessonSlides(slides: Slide[]): Slide[] {
   });
 }
 
-/** Ponto onde a linha que sai do centro de `node` em direção a (tx, ty) cruza a borda da forma. */
 function borderPoint(node: ShapeNode, tx: number, ty: number) {
   const cx = node.x + node.w / 2;
   const cy = node.y + node.h / 2;
@@ -77,7 +74,6 @@ function borderPoint(node: ShapeNode, tx: number, ty: number) {
   return { x: cx + dx * t, y: cy + dy * t };
 }
 
-/** Linha entre duas formas, saindo e chegando na borda, para a ponta da seta ficar visível. */
 export function edgeLine(a: ShapeNode, b: ShapeNode, gap = 3) {
   const start = borderPoint(a, b.x + b.w / 2, b.y + b.h / 2);
   const end = borderPoint(b, a.x + a.w / 2, a.y + a.h / 2);

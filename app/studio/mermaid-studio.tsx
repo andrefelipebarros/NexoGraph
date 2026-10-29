@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Copy, Download, FileCode2, Image as ImageIcon, Maximize2, Minus, Plus, Undo2, XCircle } from 'lucide-react';
 import { CodeEditor, type CodeEditorHandle } from '@/components/CodeEditor';
+import { Modal } from '@/components/Modal';
 import { useTheme } from '@/components/use-theme';
 import { downloadFile, svgSize, svgToPng } from '@/lib/download';
 import { markdownFileStem, mermaidToMarkdown } from '@/lib/markdown';
@@ -38,6 +39,7 @@ export function MermaidStudio({ title, source, onSourceChange, onExample, genera
   const [zoom, setZoom] = useState<number | null>(null);
   const [problemsOpen, setProblemsOpen] = useState(true);
   const [noteOpen, setNoteOpen] = useState(true);
+  const [pendingExample, setPendingExample] = useState<string | null>(null);
 
   const highlighted = useMemo(() => highlightMermaid(source), [source]);
 
@@ -163,11 +165,20 @@ export function MermaidStudio({ title, source, onSourceChange, onExample, genera
     onNotify('Markdown (.md) pronto para o GitHub');
   };
 
-  const loadExample = (exampleSource: string) => {
-    const isKnown = mermaidExamples.some((item) => item.source === source);
-    if (source.trim() && !isKnown && !window.confirm('Isso troca o código atual pelo exemplo. Continuar?')) return;
+  const applyExample = (exampleSource: string) => {
+    setPendingExample(null);
     onExample(exampleSource);
-    editorRef.current?.focus();
+    requestAnimationFrame(() => editorRef.current?.focus());
+  };
+  const loadExample = (exampleSource: string) => {
+    if (exampleSource === source) return;
+    const isKnown = mermaidExamples.some((item) => item.source === source);
+    if (source.trim() && !isKnown) { setPendingExample(exampleSource); return; }
+    applyExample(exampleSource);
+  };
+  const copyBeforeReplacing = async () => {
+    await copyCode();
+    if (pendingExample) applyExample(pendingExample);
   };
 
   const onPanStart = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -185,6 +196,20 @@ export function MermaidStudio({ title, source, onSourceChange, onExample, genera
   const onPanEnd = () => { panRef.current = null; };
 
   const stepZoom = (delta: number) => setZoom((current) => Math.min(3, Math.max(0.25, Math.round(((current ?? 1) + delta) * 100) / 100)));
+
+  const onStageWheel = useEffectEvent((event: WheelEvent) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    stepZoom(event.deltaY < 0 ? 0.1 : -0.1);
+  });
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const listener = (event: WheelEvent) => onStageWheel(event);
+    stage.addEventListener('wheel', listener, { passive: false });
+    return () => stage.removeEventListener('wheel', listener);
+  }, []);
 
   const stateLabel = renderState === 'rendering' ? 'Desenhando…' : renderState === 'ok' ? 'Atualizado' : renderState === 'error' ? (svg ? 'Mostrando a última versão válida' : 'Sem desenho ainda') : 'Preparando…';
 
@@ -293,9 +318,9 @@ export function MermaidStudio({ title, source, onSourceChange, onExample, genera
         <div className="mm-tabs">
           <div className="mm-file"><span className={`mm-dot is-${renderState}`} aria-hidden="true" /> {stateLabel}</div>
           <div className="mm-actions">
-            <button type="button" className="icon-btn" aria-label="Diminuir" onClick={() => stepZoom(-0.25)}><Minus size={14} aria-hidden="true" /></button>
+            <button type="button" className="icon-btn" aria-label="Diminuir zoom" title="Diminuir zoom" onClick={() => stepZoom(-0.25)}><Minus size={14} aria-hidden="true" /></button>
             <button type="button" className="btn btn-sm mm-zoom" title="Ajustar à janela" onClick={() => setZoom(null)}>{zoom === null ? <><Maximize2 size={12} aria-hidden="true" /> Ajustar</> : `${Math.round(zoom * 100)}%`}</button>
-            <button type="button" className="icon-btn" aria-label="Aumentar" onClick={() => stepZoom(0.25)}><Plus size={14} aria-hidden="true" /></button>
+            <button type="button" className="icon-btn" aria-label="Aumentar zoom" title="Aumentar zoom" onClick={() => stepZoom(0.25)}><Plus size={14} aria-hidden="true" /></button>
             <span className="mm-sep" aria-hidden="true" />
             <button type="button" className="btn btn-sm" onClick={exportSvg}><Download size={13} aria-hidden="true" /> SVG</button>
             <button type="button" className="btn btn-sm" onClick={exportPng}><ImageIcon size={13} aria-hidden="true" /> PNG</button>
@@ -315,8 +340,28 @@ export function MermaidStudio({ title, source, onSourceChange, onExample, genera
             </div>
           )}
         </div>
-        <div className="mm-foot">Arraste para mover o desenho. Os botões acima mudam o zoom.</div>
+        <div className="mm-foot">Arraste para mover o desenho. Use os botões acima ou Ctrl + roda do mouse para o zoom.</div>
       </section>
+      <Modal
+        open={pendingExample !== null}
+        onClose={() => setPendingExample(null)}
+        titleId="replace-code-title"
+        title="Trocar o código pelo exemplo?"
+        description="O código atual será substituído. Copie antes se quiser guardar uma cópia."
+        closeLabel="Cancelar"
+        size="md"
+        footer={(
+          <>
+            <button type="button" className="btn btn-sm" onClick={() => setPendingExample(null)}>Cancelar</button>
+            <div className="modal-foot-actions">
+              <button type="button" className="btn btn-sm" onClick={copyBeforeReplacing}><Copy size={13} aria-hidden="true" /> Copiar e trocar</button>
+              <button type="button" className="btn btn-sm btn-primary" data-autofocus onClick={() => pendingExample && applyExample(pendingExample)}>Trocar pelo exemplo</button>
+            </div>
+          </>
+        )}
+      >
+        <div className="modal-body"><pre className="modal-preview">{source.split('\n').slice(0, 8).join('\n')}{source.split('\n').length > 8 ? '\n…' : ''}</pre></div>
+      </Modal>
     </div>
   );
 }

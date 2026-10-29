@@ -16,7 +16,6 @@ export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && themes.some((theme) => theme.id === value);
 }
 
-/** Script executado antes da pintura para evitar o "flash" do tema errado. */
 export const themeInitScript = `try{var t=localStorage.getItem('${THEME_STORAGE_KEY}');if(t){document.documentElement.setAttribute('data-theme',t)}}catch(e){}`;
 
 export function readTheme(): ThemeId {
@@ -27,11 +26,10 @@ export function readTheme(): ThemeId {
 
 export function applyTheme(id: ThemeId) {
   document.documentElement.setAttribute('data-theme', id);
-  try { localStorage.setItem(THEME_STORAGE_KEY, id); } catch { /* armazenamento indisponível */ }
+  try { localStorage.setItem(THEME_STORAGE_KEY, id); } catch {}
   window.dispatchEvent(new Event(THEME_EVENT));
 }
 
-/** Lê uma variável CSS do tema ativo (valores em hexadecimal). */
 export function cssVar(name: string, fallback = '#888888') {
   if (typeof document === 'undefined') return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();

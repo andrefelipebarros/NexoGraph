@@ -8,7 +8,6 @@ export function downloadFile(name: string, content: string | Blob, type = 'text/
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Converte um texto SVG (com largura e altura explícitas) em um PNG. */
 export function svgToPng(svg: string, width: number, height: number, background: string, scale = 2): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));

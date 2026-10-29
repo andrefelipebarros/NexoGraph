@@ -1,11 +1,3 @@
-/**
- * Realce de sintaxe para Mermaid, no estilo do VS Code.
- *
- * - Colchetes, parênteses e chaves ganham uma cor por nível de aninhamento
- *   (bracket pair colorization) e os sem par ficam em vermelho.
- * - Setas ganham uma cor por tipo: contínua, tracejada, grossa e simples.
- * - Funciona sem DOM, então roda tanto no servidor (home) quanto no navegador.
- */
 
 export type DiagramKind = 'flowchart' | 'sequence' | 'class' | 'er' | 'state' | 'other';
 
@@ -29,11 +21,8 @@ export type TokenClass =
 export type Token = {
   text: string;
   cls: TokenClass;
-  /** deslocamento absoluto (em caracteres) no texto completo */
   start: number;
-  /** apenas para colchetes: nível de aninhamento, começando em 0 */
   depth?: number;
-  /** colchete sem par ou fora de lugar */
   bad?: boolean;
 };
 
@@ -260,7 +249,6 @@ export function highlightMermaid(source: string): Highlighted {
   return { kind, lines, problems, bracketAt };
 }
 
-/** Encontra o colchete ao lado do cursor e o seu par, como o VS Code faz. */
 export function matchAtCaret(bracketAt: Map<number, BracketInfo>, caret: number): [number, number] | null {
   for (const candidate of [caret - 1, caret]) {
     const info = bracketAt.get(candidate);
@@ -276,11 +264,9 @@ export function lineColFromOffset(source: string, offset: number) {
   return { line, col };
 }
 
-/** Traduz o erro do Mermaid para uma mensagem em português com a linha, quando existir. */
 export function parseMermaidError(message: string, totalLines?: number): { line?: number; text: string; detail: string } {
   const detail = message.trim();
   const lineMatch = /line\s+(\d+)/i.exec(detail);
-  // O Mermaid às vezes aponta para a linha depois da última (fim do texto): volta para a última linha real.
   const line = lineMatch ? (totalLines ? Math.min(Number(lineMatch[1]), totalLines) : Number(lineMatch[1])) : undefined;
   if (/No diagram type detected/i.test(detail)) {
     return { text: 'Não encontrei o tipo do diagrama. Comece a primeira linha com, por exemplo, "flowchart LR".', detail };

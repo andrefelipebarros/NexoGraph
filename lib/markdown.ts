@@ -1,6 +1,5 @@
 import type { LessonLayout, Slide } from '@/app/studio/types';
 
-/** Converts a user-facing title into a safe, readable download filename. */
 export function markdownFileStem(value: string, fallback = 'nexograph') {
   const stem = value
     .normalize('NFD')
@@ -16,7 +15,6 @@ function singleLine(value: string, fallback = '') {
 }
 
 function mermaidLabel(value: string, fallback: string) {
-  // Mermaid flowchart labels are quoted; neutralize delimiters that could break the label.
   return singleLine(value, fallback)
     .replace(/\\/g, '/')
     .replace(/"/g, "'")
@@ -28,7 +26,6 @@ function chooseFence(source: string) {
   return '``````';
 }
 
-/** Wraps Mermaid source in a GitHub-Flavored Markdown document. */
 export function mermaidToMarkdown(title: string, source: string) {
   const heading = singleLine(title, 'Diagrama NexoGraph');
   const code = source.trim();
@@ -53,7 +50,6 @@ function lessonDiagram(layout: LessonLayout, slides: Slide[]) {
     slides.forEach((slide, index) => {
       const parentId = slide.parentId ?? null;
       const parentIndex = parentId ? slides.findIndex((candidate) => candidate.id === parentId) : -1;
-      // Match the on-screen layout: invalid/self/future parent links are treated as roots.
       if (parentIndex >= 0 && parentIndex < index) {
         lines.push(`  ${ids.get(parentId!)} --> ${ids.get(slide.id)}`);
       }
@@ -62,7 +58,6 @@ function lessonDiagram(layout: LessonLayout, slides: Slide[]) {
   return lines.join('\n');
 }
 
-/** Exports the entire lesson as Markdown, including an embeddable Mermaid diagram and block notes. */
 export function lessonToMarkdown(title: string, layout: LessonLayout, slides: Slide[]) {
   const heading = singleLine(title, 'Aula NexoGraph');
   const layoutName = layout === 'tree' ? 'Raiz (topo para baixo)' : layout === 'tree-reverse' ? 'Invertida (direita para esquerda)' : 'Sequência';
