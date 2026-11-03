@@ -236,3 +236,5 @@ O NexoGraph é distribuído sob uma licença de uso e contribuição própria. O
 Quem envia uma contribuição concorda que ela pode ser incluída no projeto, com o crédito mantido no histórico do repositório. O texto completo está em [`LICENSE`](LICENSE).
 
 As fontes Schibsted Grotesk, JetBrains Mono e Kalam da interface vêm do Fontsource e são distribuídas sob a SIL Open Font License 1.1.
+
+
