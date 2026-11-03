@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+### Correções
+
+- A visualização do Mermaid aparecia quase vazia (pontos minúsculos e linhas esticadas) para quem usa "reduzir movimento" no sistema. A regra global que zerava as animações atrapalhava a medição dos textos do Mermaid e agora não vale dentro do diagrama.
+- A revelação dos blocos da aula não aparecia para quem usa "reduzir movimento". Agora a câmera não se move, mas a caixa entra com um fade e a seta continua se desenhando.
+- A aula mostra todos os blocos revelados enquanto cabem na tela com letras legíveis, em vez de cortar os primeiros na borda esquerda. Só quando o desenho fica grande demais a câmera volta a acompanhar o bloco atual.
+
 ## 0.6.0
 
 ### Novidades

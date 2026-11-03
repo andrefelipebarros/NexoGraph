@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <strong>Versão 0.6.0</strong> · Next.js 16 (App Router) · React 19.2 · TypeScript · Mermaid 11 · CSS puro com variáveis · lucide-react · ESLint
+  <strong>Versão 0.6.1</strong> · Next.js 16 (App Router) · React 19.2 · TypeScript · Mermaid 11 · CSS puro com variáveis · lucide-react · ESLint
 </p>
 
 ---
@@ -236,5 +236,3 @@ O NexoGraph é distribuído sob uma licença de uso e contribuição própria. O
 Quem envia uma contribuição concorda que ela pode ser incluída no projeto, com o crédito mantido no histórico do repositório. O texto completo está em [`LICENSE`](LICENSE).
 
 As fontes Schibsted Grotesk, JetBrains Mono e Kalam da interface vêm do Fontsource e são distribuídas sob a SIL Open Font License 1.1.
-
-
