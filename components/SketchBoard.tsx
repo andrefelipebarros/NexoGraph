@@ -142,13 +142,24 @@ export function SketchBoard({ slides, index, onIndex, large = false, layout = 'l
   const right = Math.max(...positions.map((position) => position.x + BOX_W), BOX_W);
   const bottom = Math.max(...positions.map((position) => position.y + BOX_H + NOTE_H), BOX_H + NOTE_H);
   const overviewScale = Math.min((size.w - 24) / (right - left + 40), (size.h - 24) / (bottom - top + 40));
-  const scale = overview ? Math.max(0.2, overviewScale) : Math.max(layout === 'linear' ? 0.4 : 0.3, fit) * zoom;
-  const centerX = overview ? (left + right) / 2 : (current.x + previous.x) / 2 + BOX_W / 2;
+  // Enquanto o desenho inteiro couber com letras legíveis, mostra todos os blocos juntos.
+  // Só quando fica grande demais a câmera passa a acompanhar o bloco atual e o anterior.
+  const wholeBottom = Math.max(...positions.map((position) => position.y + BOX_H + 330), BOX_H + 330);
+  const wholeFit = Math.min(large ? 1.22 : 1.02, (size.w - 52) / (right - left + 40), (size.h - 76) / (wholeBottom - top + 40));
+  const showAll = overview || wholeFit >= 0.42;
+  const scale = overview
+    ? Math.max(0.2, overviewScale)
+    : showAll
+      ? wholeFit * zoom
+      : Math.max(layout === 'linear' ? 0.4 : 0.3, fit) * zoom;
+  const centerX = overview || showAll ? (left + right) / 2 : (current.x + previous.x) / 2 + BOX_W / 2;
   const centerY = overview
     ? (top + bottom) / 2
-    : layout === 'linear'
-      ? Math.min(current.y, previous.y) + 190
-      : (current.y + previous.y) / 2 + 190;
+    : showAll
+      ? (top + wholeBottom) / 2
+      : layout === 'linear'
+        ? Math.min(current.y, previous.y) + 190
+        : (current.y + previous.y) / 2 + 190;
   const tx = size.w / 2 - centerX * scale + offset.x;
   const ty = size.h / 2 - centerY * scale + offset.y;
 

@@ -279,7 +279,11 @@ code, kbd, pre { font-family: var(--mono); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  /* Fora do Mermaid (que mede os textos ao desenhar e quebra com tempos zerados) e da folha da aula,
+     que tem a própria versão calma abaixo. */
+  body *:not(.mm-svg *):not([id^="dnexograph-mmd"]):not([id^="dnexograph-mmd"] *):not(.sketch):not(.sketch *) {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important;
+  }
 }
 
 .btn {
@@ -809,7 +813,13 @@ code, kbd, pre, .ce, .ce-input, .win-code, .wb-code, .mm-legend, .win-status, .s
 .sketch-dots button.is-active { background: var(--accent); transform: scale(1.35); }
 .is-large .sketch-tools { bottom: 70px; }
 .is-large .sketch-tip { bottom: 70px; }
-@media (prefers-reduced-motion: reduce) { .sketch-world { transition: none; } .sketch-card, .sk-draw, .sk-head { animation: none; stroke-dashoffset: 0; opacity: 1; } }
+/* Movimento reduzido: sem deslocar nem ampliar a câmera, mas a revelação continua visível, só com fade e traço. */
+@media (prefers-reduced-motion: reduce) {
+  .sketch-world { transition: none; }
+  .sketch-card { animation: sk-appear 0.6s ease-out both; animation-delay: 0.1s; }
+  .sk-head { animation: sk-fade 0.2s ease-out 0.7s forwards; }
+}
+@keyframes sk-appear { from { opacity: 0; } to { opacity: 1; } }
 
 .lesson { background: var(--bg); }
 .lesson-side { background: var(--bg-side); }
